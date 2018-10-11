@@ -3,6 +3,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
   SECRET_KEY = os.environ.get('SECRET_KEY') or 'abc+1s'
+  SQLALCHEMY_TRACK_MODIFICATIONS = True
   SQLALCHEMY_COMMIT_ON_TEARDOWN = True
   MAIL_SERVER = 'smtp.qq.com'
   MAIL_PORT = 465
@@ -16,14 +17,14 @@ class Config:
 
 class DevelopmentConfig(Config):
   DEBUG = True
-  SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+  SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL')
 
 class TestingConfig(Config):
   TESTING = True
-  SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+  SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL')
 
 class ProductionConfig(Config):
-  SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+  SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
 config = {
   'development': DevelopmentConfig,
