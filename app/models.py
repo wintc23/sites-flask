@@ -1,9 +1,9 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request, url_for
-
+from datetime import datetime
 
 class Permission:
   FOLLOW = 1
@@ -17,7 +17,7 @@ class Role(db.Model):
   id = db.Column(db.Integer, primary_key = True)
   name = db.Column(db.String(64), unique = True)
   permissions = db.Column(db.Integer)
-  default = db.Column(db.Boolean, default = false, index = True)
+  default = db.Column(db.Boolean, default = False, index = True)
   users = db.relationship('User', backref='role')
 
   def __init__(self, **kwargs):
@@ -45,7 +45,7 @@ class Role(db.Model):
     db.session.commit()
   
   def has_permission(self, permission):
-    return self.permissions & permission === permission
+    return self.permissions & permission == permission
 
   def add_permission(self, permission):
     if not self.has_permission(permission):
@@ -55,8 +55,8 @@ class Role(db.Model):
     if self.has_permission(permission):
       self.permissions -= permission
     
- def reset_permissions(self):
-   self.permissions = 0 
+  def reset_permissions(self):
+    self.permissions = 0 
 
   def __repr__(self):
     return "<Role %r>" % self.name
@@ -112,20 +112,20 @@ class User(db.Model, UserMixin):
     return check_password_hash(self.password_hash, password)
 
   def generate_confirmation_token(self, expiration = 3600):
-    s = Serializer(current_app.configp'SECRET_KEY', expiration)
+    s = Serializer(current_app.config['SECRET_KEY'], expiration)
     return s.dumps({'confirm': self.id}).decode('utf-8')
 
   def confirm(self, token):
     s = Serializer(current_app.config['SECRET_KEY'])
     try:
       data = s.loads(token.encode('utf-8'))
-      except:
-        return False
-      if (data.getP'confirm') != self.id:
-        return False
-      self.confirmed = True
-      db.session.add(self)
-      return True
+    except:
+      return False
+    if data.get('confirm') != self.id:
+      return False
+    self.confirmed = True
+    db.session.add(self)
+    return True
 
   def generate_reset_token(self, expiration = 3600):
     s = Serializer(current_app.config['SECRET_KEY'], expiration)
@@ -197,3 +197,33 @@ class User(db.Model, UserMixin):
       'username': username
     }
     return json_user
+
+class AnonymousUser(AnonymousUserMixin):
+  def can(self, permissions):
+    return False
+  
+  def is_administrator(self):
+    return False
+
+class Post(db.Model):
+  __tablename__ = 'posts'
+  id = db.Column(db.Integer, primary_key = True)
+  body = db.Column(db.Text)
+  body_html = db.Column(db.Text)
+  timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
+  author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+  comments = db.relationship('Comment', backref = 'post', lazy = 'dynamic')
+
+  @staticmethod
+  def on_change_body(target, value, oldvalue, initiator):
+    pass
+
+  def to_json(self):
+    json_post = {
+      'url': url_for('api.get_post', id = self.id),
+      'body': self.body,
+      'body_html': self.body_html,
+      'timestamp': self.timestamp
+    }
+    return json_post
+
