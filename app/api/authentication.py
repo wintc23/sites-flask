@@ -1,4 +1,4 @@
-from flask import g
+from flask import g, jsonify, request
 from flask_httpauth import HTTPBasicAuth
 from ..models import User
 from . import api
@@ -8,6 +8,7 @@ auth = HTTPBasicAuth()
 
 @auth.verify_password
 def verify_password(email_or_token, password):
+  print('verify, ~~~~~~~~~~~~~~~~~~~`')
   if email_or_token == '':
     return False
   if password == '':
@@ -25,14 +26,18 @@ def verify_password(email_or_token, password):
 def auth_error():
   return unauthorized('认证失败')
 
-@api.before_request
-@auth.login_required
-def before_request():
-  if not g.current_user.is_anonymous and not g.current_user.confirmed:
-    return forbidden('未确认账户')
+# @api.before_request
+# @auth.login_required
+# def before_request():
+#   if not g.current_user.is_anonymous and not g.current_user.confirmed:
+#     return forbidden('未确认账户')
 
 @api.route('/tokens/', methods=['POST'])
 def get_token():
   if g.current_user.is_anonymous or g.token_used:
     return unauthorized('Invalid credentials')
   return jsonify({'token': g.current_user.generate_auth_token(expiration=3600), 'expiration': 3600})
+
+@api.route('/login', methods=['POST'])
+def login():
+  return jsonify(request.json)
