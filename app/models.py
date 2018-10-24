@@ -81,6 +81,7 @@ class User(db.Model, UserMixin):
   member_since = db.Column(db.DateTime(), default = datetime.utcnow)
   last_seen = db.Column(db.DateTime(), default = datetime.utcnow)
   posts = db.relationship('Post', backref = 'author', lazy = 'dynamic')
+  comments = db.relationship('Comment', backref = 'author', lazy = 'dynamic')
   # followed = db.relationship('Follow',
     # foreign_keys = [Follow.followed_id],
     # backref = db.backref('follower', lazy="joined")
@@ -112,7 +113,7 @@ class User(db.Model, UserMixin):
     return check_password_hash(self.password_hash, password)
 
   def generate_confirmation_token(self, expiration = 3600):
-    s = Serializer(current_app.config['SECRET_KEY'], expiration)
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in = expiration)
     return s.dumps({'confirm': self.id}).decode('utf-8')
 
   def confirm(self, token):
@@ -128,7 +129,7 @@ class User(db.Model, UserMixin):
     return True
 
   def generate_reset_token(self, expiration = 3600):
-    s = Serializer(current_app.config['SECRET_KEY'], expiration)
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in = expiration)
     return s.dumps({'reset': self.id}).decode('utf-8')
 
   @staticmethod
@@ -146,7 +147,7 @@ class User(db.Model, UserMixin):
     return True
   
   def generate_email_change_token(self, new_email, expiration = 3600):
-    s = Serializer(current_app.config['SECRET_KEY'], expiration)
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in = expiration)
     return s.dumps({
       'change_email': self.id,
       'new_email': new_email
@@ -170,14 +171,14 @@ class User(db.Model, UserMixin):
     return True
 
   def generate_auth_token(self, expiration):
-     s = Serializer(current_app.config['SECRET_KEY'], expiration = expiration)
-     return s.dumps({id: self.id})
+     s = Serializer(current_app.config['SECRET_KEY'], expires_in = expiration)
+     return s.dumps({'id': self.id}).decode('utf-8')
   
   @staticmethod
   def verify_auth_token(token):
     s = Serializer(current_app.config['SECRET_KEY'])
     try:
-      data = s.loads(token)
+      data = s.loads(token.encode('utf-8'))
     except:
       return None
     return User.query.get(data['id'])
@@ -194,7 +195,9 @@ class User(db.Model, UserMixin):
   
   def to_json(self):
     json_user = {
-      'username': username
+      'id': self.id,
+      'username': self.username,
+      'avatar': 'https://avatars2.githubusercontent.com/u/33415699?s=460&v=4'
     }
     return json_user
 
@@ -211,7 +214,7 @@ class Post(db.Model):
   body = db.Column(db.Text)
   body_html = db.Column(db.Text)
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
-  author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+  author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   comments = db.relationship('Comment', backref = 'post', lazy = 'dynamic')
 
   @staticmethod
@@ -227,3 +230,11 @@ class Post(db.Model):
     }
     return json_post
 
+class Comment(db.Model):
+  __tablename__ = 'comments'
+  id = db.Column(db.Integer, primary_key = True)
+  body = db.Column(db.Text)
+  post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+  author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  # response_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)

@@ -20,6 +20,8 @@ def forbidden(message):
   response.status_code = 403
   return response
 
+def not_found(message):
+  responese = jsonify({'error': 'not found', 'message': message})
 
 @api.errorhandler(ValidationError)
 def validation_error(e):
