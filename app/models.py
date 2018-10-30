@@ -21,8 +21,8 @@ class Role(db.Model):
   users = db.relationship('User', backref='role')
 
   def __init__(self, **kwargs):
-    super(Role, self).__init__(kwargs)
-    if self.permissions in None:
+    super(Role, self).__init__(**kwargs)
+    if self.permissions is None:
       self.permissions = 0
 
   @staticmethod
@@ -61,11 +61,11 @@ class Role(db.Model):
   def __repr__(self):
     return "<Role %r>" % self.name
 
-class Follow(db.Model):
-  __tablename__ = 'follows'
-  follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key = True)
-  followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key = True)
-  timestamp = db.Column(db.DateTime, default = datetime.utcnow)
+# class Follow(db.Model):
+#   __tablename__ = 'follows'
+#   follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key = True)
+#   followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key = True)
+#   timestamp = db.Column(db.DateTime, default = datetime.utcnow)
 
 class User(db.Model, UserMixin):
   __tablename__ = 'users'
@@ -82,6 +82,7 @@ class User(db.Model, UserMixin):
   last_seen = db.Column(db.DateTime(), default = datetime.utcnow)
   posts = db.relationship('Post', backref = 'author', lazy = 'dynamic')
   comments = db.relationship('Comment', backref = 'author', lazy = 'dynamic')
+  likes = db.relationship('Like', backref = 'author', lazy = 'dynamic')
   # followed = db.relationship('Follow',
     # foreign_keys = [Follow.followed_id],
     # backref = db.backref('follower', lazy="joined")
@@ -200,6 +201,28 @@ class User(db.Model, UserMixin):
       'avatar': 'https://avatars2.githubusercontent.com/u/33415699?s=460&v=4'
     }
     return json_user
+  
+  @staticmethod
+  def generate_fake(count = 100):
+    from sqlalchemy.exc import IntegrityError
+    from random import seed
+    import forgery_py
+
+    seed()
+    for i in range(count):
+      u = User(email=forgery_py.internet.email_address(),
+        username=forgery_py.internet.user_name(),
+        password=forgery_py.lorem_ipsum.word(),
+        confirmed=True,
+        name=forgery_py.name.full_name(),
+        location=forgery_py.address.city(),
+        aboute_me=forgery_py.lorem_ipsum.sentence(),
+        member_since=forgery_py.date.date(True))
+      db.session.add(u)
+      try:
+        db.session.commit()
+      except:
+        db.session.rollback()
 
 class AnonymousUser(AnonymousUserMixin):
   def can(self, permissions):
@@ -211,11 +234,15 @@ class AnonymousUser(AnonymousUserMixin):
 class Post(db.Model):
   __tablename__ = 'posts'
   id = db.Column(db.Integer, primary_key = True)
+  title = db.Column(db.Text)
   body = db.Column(db.Text)
   body_html = db.Column(db.Text)
+  abstract = db.Column(db.Text)
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   comments = db.relationship('Comment', backref = 'post', lazy = 'dynamic')
+  read_times = db.Column(db.Integer, default = 0)
+  likes = db.relationship('Like', backref = 'post', lazy = 'dynamic')
 
   @staticmethod
   def on_change_body(target, value, oldvalue, initiator):
@@ -223,12 +250,45 @@ class Post(db.Model):
 
   def to_json(self):
     json_post = {
-      'url': url_for('api.get_post', id = self.id),
+      # 'url': url_for('api.get_post', id = self.id),
       'body': self.body,
       'body_html': self.body_html,
-      'timestamp': self.timestamp
+      'timestamp': self.timestamp,
     }
     return json_post
+  
+  def abstract_json(self):
+    json_post = {
+      'url': url_for('api.get_post', id = self.id), 
+      'title': self.title,
+      'timestamp': self.timestamp,
+      'abstract': self.abstract,
+      'read_times': self.read_times,
+      'likes': self.likes.count(),
+      'comment_times': self.comments.count(),
+      'body': self.body,
+    }
+    return json_post
+
+
+  @staticmethod
+  def generate_fake(count=100):
+    from random import seed, randint
+    import forgery_py
+
+    seed()
+    user_count = User.query.count()
+    for i in range(count):
+      u = User.query.offset(randint(0, user_count - 1)).first()
+      p = Post(body=forgery_py.lorem_ipsum.sentences(randint(10, 30)),
+        read_times=randint(0, 100),
+        title=forgery_py.lorem_ipsum.sentences(1),
+        abstract=forgery_py.lorem_ipsum.sentences(randint(1, 3)),
+        timestamp=forgery_py.date.date(True),
+        author=u)
+      db.session.add(p)
+      db.session.commit()
+      print('auto create post %s done' % i)
 
 class Comment(db.Model):
   __tablename__ = 'comments'
@@ -237,4 +297,11 @@ class Comment(db.Model):
   post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   # response_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
+
+class Like(db.Model):
+  __tabname__ = 'likes'
+  id = db.Column(db.Integer, primary_key = True)
+  post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+  author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)

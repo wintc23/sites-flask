@@ -16,7 +16,6 @@ def login_required():
   def decorator(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-      print ('login-required~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
       if g.current_user.is_anonymous:
         return unauthorized('非法请求')
       return f(*args, **kwargs)

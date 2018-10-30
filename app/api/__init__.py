@@ -1,5 +1,5 @@
 from flask import Blueprint
 
-api = Blueprint('auth', __name__)
+api = Blueprint('api', __name__)
 
 from . import authentication, posts, errors, users

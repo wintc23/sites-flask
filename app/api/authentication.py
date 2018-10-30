@@ -4,6 +4,8 @@ from ..models import User, AnonymousUser
 from . import api
 from .decorators import login_required
 from .errors import unauthorized, forbidden
+from .. import db
+from ..email import send_email
 
 # auth = HTTPBasicAuth()
 
@@ -25,6 +27,7 @@ def verify_password(email_or_token, password):
 
 @api.before_request
 def before_request():
+  print(request.headers)
   if (request.method == 'OPTIONS'):
     return jsonify({ 'success': True })
   authString = request.headers.get('Authorization', '')
@@ -54,4 +57,32 @@ def get_user_by_token():
 
 @api.route('/register/', methods=["POST"])
 def register():
-  return jsonify(request.json)
+  data = request.json
+  user = User(email = data['email'], username = data['username'], password = data['password'])
+  db.session.add(user)
+  try:
+    db.session.commit()
+  except:
+    res = jsonify({ "error": "bad request", "message": "参数错误" })
+    res.status_code = 403
+    return res
+  token = user.generate_confirmation_token()
+  send_email(user.email, )
+  return jsonify({ "success": True })
+
+@api.after_request
+def after_request(response):
+  print('after-request')
+  try:
+    db.session.commit()
+  except:
+    response = jsonify({ 'error': 'database error', 'message': '数据出错，请重试' })
+    response.status_code = 403
+  return response
+
+@api.teardown_request
+def dbsession_clean(exception=None):
+  try:
+    db.session.remove()
+  finally:
+    pass

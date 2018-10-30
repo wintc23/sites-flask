@@ -4,13 +4,14 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
   SECRET_KEY = os.environ.get('SECRET_KEY') or 'abc+1s'
   SQLALCHEMY_TRACK_MODIFICATIONS = True
-  SQLALCHEMY_COMMIT_ON_TEARDOWN = True
   MAIL_SERVER = 'smtp.qq.com'
   MAIL_PORT = 465
   MAIL_USE_SSL = True
   MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
   MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-
+  FLASK_ADMIN = os.environ.get('FLASK_ADMIN')
+  FLASK_POSTS_PER_PAGE = 20
+  
   staticmethod
   def init_app(app):
     pass
