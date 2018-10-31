@@ -27,7 +27,6 @@ def verify_password(email_or_token, password):
 
 @api.before_request
 def before_request():
-  print(request.headers)
   if (request.method == 'OPTIONS'):
     return jsonify({ 'success': True })
   authString = request.headers.get('Authorization', '')

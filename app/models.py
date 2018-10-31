@@ -280,10 +280,10 @@ class Post(db.Model):
     user_count = User.query.count()
     for i in range(count):
       u = User.query.offset(randint(0, user_count - 1)).first()
-      p = Post(body=forgery_py.lorem_ipsum.sentences(randint(10, 30)),
+      p = Post(body=forgery_py.lorem_ipsum.sentences(randint(50, 100)),
         read_times=randint(0, 100),
         title=forgery_py.lorem_ipsum.sentences(1),
-        abstract=forgery_py.lorem_ipsum.sentences(randint(1, 3)),
+        abstract=forgery_py.lorem_ipsum.sentences(randint(5, 20)),
         timestamp=forgery_py.date.date(True),
         author=u)
       db.session.add(p)
