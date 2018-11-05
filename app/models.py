@@ -5,6 +5,11 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request, url_for
 from datetime import datetime
 
+post_tag_relations = db.Table('post_tag_relations',
+  db.Column('post_id', db.Integer, db.ForeignKey('tags.id')),
+  db.Column('tag_id', db.Integer, db.ForeignKey('posts.id'))
+)
+
 class Permission:
   FOLLOW = 1
   COMMENT = 2
@@ -76,7 +81,7 @@ class User(db.Model, UserMixin):
   password_hash = db.Column(db.String(128))
   confirmed = db.Column(db.Boolean, default = False)
   name = db.Column(db.String(64))
-  location = db.Column(db.String(65))
+  location = db.Column(db.String(64))
   aboute_me = db.Column(db.Text())
   member_since = db.Column(db.DateTime(), default = datetime.utcnow)
   last_seen = db.Column(db.DateTime(), default = datetime.utcnow)
@@ -198,6 +203,7 @@ class User(db.Model, UserMixin):
     json_user = {
       'id': self.id,
       'username': self.username,
+      'manager': self.email == current_app.config['FLASK_ADMIN'],
       'avatar': 'https://avatars2.githubusercontent.com/u/33415699?s=460&v=4'
     }
     return json_user
@@ -221,6 +227,7 @@ class User(db.Model, UserMixin):
       db.session.add(u)
       try:
         db.session.commit()
+        print('auto create user %s done' % (i + 1))
       except:
         db.session.rollback()
 
@@ -240,6 +247,11 @@ class Post(db.Model):
   abstract = db.Column(db.Text)
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  type_id = db.Column(db.Integer, db.ForeignKey('post_type.id'))
+  tags = db.relationship('Tag',
+    secondary = post_tag_relations,
+    backref = db.backref('tags', lazy = 'dynamic'),
+    lazy='dynamic')
   comments = db.relationship('Comment', backref = 'post', lazy = 'dynamic')
   read_times = db.Column(db.Integer, default = 0)
   likes = db.relationship('Like', backref = 'post', lazy = 'dynamic')
@@ -250,7 +262,8 @@ class Post(db.Model):
 
   def to_json(self):
     json_post = {
-      # 'url': url_for('api.get_post', id = self.id),
+      'id': self.id,
+      'title': self.title,
       'body': self.body,
       'body_html': self.body_html,
       'timestamp': self.timestamp,
@@ -259,7 +272,7 @@ class Post(db.Model):
   
   def abstract_json(self):
     json_post = {
-      'url': url_for('api.get_post', id = self.id), 
+      'id': self.id,
       'title': self.title,
       'timestamp': self.timestamp,
       'abstract': self.abstract,
@@ -269,7 +282,6 @@ class Post(db.Model):
       'body': self.body,
     }
     return json_post
-
 
   @staticmethod
   def generate_fake(count=100):
@@ -287,8 +299,11 @@ class Post(db.Model):
         timestamp=forgery_py.date.date(True),
         author=u)
       db.session.add(p)
-      db.session.commit()
-      print('auto create post %s done' % i)
+      try:
+        db.session.commit()
+        print('auto create post %s done' % (i + 1))
+      except:
+        db.session.rollback()
 
 class Comment(db.Model):
   __tablename__ = 'comments'
@@ -298,6 +313,29 @@ class Comment(db.Model):
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   # response_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
+  
+  @staticmethod
+  def generate_fake(count=100):
+    from random import seed, randint
+    import forgery_py
+    
+    seed()
+    user_count = User.query.count()
+    post_count = Post.query.count()
+    for i in range(count):
+      u = User.query.offset(randint(0, user_count - 1)).first()
+      p = Post.query.offset(randint(0, post_count - 1)).first()
+      like = Comment(body=forgery_py.lorem_ipsum.sentences(randint(2,5)),
+        timestamp=forgery_py.date.date(True),
+        author=u,
+        post=p
+      )
+      db.session.add(like)
+      try:
+        db.session.commit()
+        print('auto create comment %s done' % (i + 1))
+      except:
+        db.session.rollback()
 
 class Like(db.Model):
   __tabname__ = 'likes'
@@ -305,3 +343,49 @@ class Like(db.Model):
   post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
+
+  @staticmethod
+  def generate_fake(count=100):
+    from random import seed, randint
+    import forgery_py
+    
+    seed()
+    user_count = User.query.count()
+    post_count = Post.query.count()
+    for i in range(count):
+      u = User.query.offset(randint(0, user_count - 1)).first()
+      p = Post.query.offset(randint(0, post_count - 1)).first()
+      like = Like(timestamp=forgery_py.date.date(True), author=u, post=p)
+      db.session.add(like)
+      try:
+        db.session.commit()
+        print('auto create like %s done' % ( i + 1 ))
+      except:
+        db.session.rollback()
+
+class Tag(db.Model):
+  __tablename__ = 'tags'
+  id = db.Column(db.Integer, primary_key = True)
+  name = db.Column(db.String(64))
+  alias = db.Column(db.String(64), unique = True)
+
+  def to_json(self):
+    return {
+      'id': self.id,
+      'name': self.name,
+      'alias': self.alias
+    }
+
+class PostType(db.Model):
+  __tablename__ = 'post_type'
+  id = db.Column(db.Integer, primary_key = True)
+  name = db.Column(db.String(64))
+  alias = db.Column(db.String(64), unique = True)
+  posts = db.relationship("Post", backref='type')
+
+  def to_json(self):
+    return {
+      'id': self.id,
+      'name': self.name,
+      'alias': self.alias
+    }
