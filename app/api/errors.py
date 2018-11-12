@@ -15,13 +15,13 @@ def unauthorized(message, notify = True):
   return response
 
 
-def forbidden(message):
-  response = jsonify({'error': 'forbidden', 'message': message})
+def forbidden(message, notify = False):
+  response = jsonify({'error': 'forbidden', 'message': message, 'notify': notify})
   response.status_code = 403
   return response
 
-def not_found(message):
-  responese = jsonify({'error': 'not found', 'message': message})
+def not_found(message, notify = False):
+  responese = jsonify({'error': 'not found', 'message': message, 'notify': notifya})
   response.status_code = 404
   return response
 
