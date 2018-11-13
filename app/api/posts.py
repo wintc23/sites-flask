@@ -1,10 +1,10 @@
 from .. import db
-from flask import request, current_app, jsonify
+from flask import request, current_app, jsonify, g
 from . import api
 from .decorators import permission_required
 from functools import reduce
 from ..models import Post, PostType, Tag
-from .errors import bad_request
+from .errors import bad_request, unauthorized
 from .decorators import login_required
 
 @api.route('/posts/', methods=["GET", "POST"])
@@ -26,6 +26,37 @@ def get_post():
   post_id = request.args.get('id')
   post = Post.query.get_or_404(post_id)
   return jsonify(post.to_json())
+
+@api.route('/save-post/', methods=["POST"])
+@login_required()
+def save_post():
+  post_id = request.json.get('id')
+  if post_id:
+    post = Post.query.get_or_404(post_id)
+    if (post.author != g.current_user):
+      return bad_request('非法请求')
+    for tag in post.tags.all():
+      if not tag.id in request.json['tags']:
+        post.tags.remove(tag)
+      else:
+        request.json['tags'].remove(tag.id)
+  else:
+    post = Post(author = g.current_user)
+  for tag_id in request.json['tags']:
+    tag = Tag.query.get(tag_id)
+    if tag:
+      post.tags.append(tag)  
+  post.type =  PostType.query.get(request.json['type'])
+  post.title = request.json['title']
+  post.body = request.json['body']
+  db.session.add(post)
+  try:
+    db.session.commit()
+  except:
+    db.session.remove()
+    response = jsonify({ 'error': 'database error', 'message': '数据出错，请重试' })
+    return response
+  return jsonify({'message': '保存成功', 'id': post.id })
 
 @api.route('/post-types/', methods=["GET"])
 def get_types():

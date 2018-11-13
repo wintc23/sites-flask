@@ -263,23 +263,29 @@ class Post(db.Model):
   def to_json(self):
     json_post = {
       'id': self.id,
+      'author_id': self.author.id,
       'title': self.title,
       'body': self.body,
       'body_html': self.body_html,
       'timestamp': self.timestamp,
+      'read_times': self.read_times,
+      'likes': self.likes.count(),
+      'comment_times': self.comments.count(),
+      'tags': list(map(lambda x : x.id, self.tags)),
+      'type': self.type_id
     }
     return json_post
   
   def abstract_json(self):
     json_post = {
       'id': self.id,
+      'author_id': self.author.id,
       'title': self.title,
       'timestamp': self.timestamp,
       'abstract': self.abstract,
       'read_times': self.read_times,
       'likes': self.likes.count(),
-      'comment_times': self.comments.count(),
-      'body': self.body,
+      'comment_times': self.comments.count()
     }
     return json_post
 
