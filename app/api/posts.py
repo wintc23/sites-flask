@@ -3,14 +3,16 @@ from flask import request, current_app, jsonify, g
 from . import api
 from .decorators import permission_required
 from functools import reduce
-from ..models import Post, PostType, Tag
+from ..models import Post, PostType, Tag, Comment
 from .errors import bad_request, unauthorized
 from .decorators import login_required
 
-@api.route('/posts/', methods=["GET", "POST"])
+@api.route('/posts/', methods=["POST"])
 def get_posts():
-  page = request.args.get('page', 1, type = int)
-  pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+  page = request.json.get('page', 1)
+  post_type = request.json.get('type', 'blog')
+  type_id = PostType.query.filter_by(alias=post_type).first().id
+  pagination = Post.query.filter_by(type_id=type_id).order_by(Post.timestamp.desc()).paginate(
     page, per_page = current_app.config['FLASK_POSTS_PER_PAGE'],
     error_out = False)
   posts = pagination.items
@@ -21,11 +23,33 @@ def get_posts():
     "page": page
   })
 
-@api.route('/post/', methods=["GET"])
+@api.route('/post/', methods=["POST"])
 def get_post():
-  post_id = request.args.get('id')
+  post_id = request.json.get('postId')
+  type_id = 0
+  post_type = request.json.get('postType')
+  if post_type:
+    type_id = PostType.query.filter_by(alias=post_type).first().id  
   post = Post.query.get_or_404(post_id)
-  return jsonify(post.to_json())
+  query = Post.query
+  if type_id:
+    query = query.filter_by(type_id = type_id)
+  post_list = query.order_by(Post.timestamp.desc()).all()
+  index = post_list.index(post)
+  before = {}
+  after = {}
+  if index != -1:
+    length = len(post_list)
+    if (length > index + 1):
+      post_before = post_list[index + 1]
+      before = post_before.abstract_json()
+    if (index - 1 >= 0):
+      post_after = post_list[index - 1]
+      after = post_after.abstract_json()
+  json = post.to_json()
+  json['before'] = before or None
+  json['after'] = after or None
+  return jsonify(json)
 
 @api.route('/save-post/', methods=["POST"])
 @login_required()
@@ -169,3 +193,40 @@ def manage_tag():
 #     else:
 #       return bad_request('该标签已存在', True)
 #   return bad_request('参数错误')
+
+@api.route('/add-comment/', methods=["POST"])
+@login_required()
+def add_comment():
+  params = {}
+  body = request.json.get('body', '')
+  post_id = request.json.get('postId')
+  response_id = request.json.get('responseId')
+  if not body:
+    return bad_request('评论不能为空', True)
+  if not post_id:
+    return bad_request('错误请求')
+  params['body'] = body
+  params['post_id'] = post_id
+  params['author'] = g.current_user
+  if response_id:
+    response = Comment.query.get(response_id)
+    if response:
+      params['response'] = response
+  comment = Comment(**params)
+  db.session.add(comment)
+  try:
+    db.session.commit()
+  except:
+    db.session.rollback()
+    return bad_request('数据库错误')
+  return jsonify({ 'message': '评论成功' })
+
+@api.route('/get-comments/', methods=["GET"])
+def get_comments():
+  post_id = request.args.get('postId')
+  if not post_id:
+    return bad_request('请求错误', True)
+  post = Post.query.get(post_id)
+  if not post:
+    return bad_request('请求错误', True)
+  return jsonify(post.comments_json())

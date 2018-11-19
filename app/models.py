@@ -1,3 +1,5 @@
+import time
+
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
@@ -267,12 +269,11 @@ class Post(db.Model):
       'title': self.title,
       'body': self.body,
       'body_html': self.body_html,
-      'timestamp': self.timestamp,
+      'timestamp': time.mktime(self.timestamp.timetuple()),
       'read_times': self.read_times,
       'likes': self.likes.count(),
-      'comment_times': self.comments.count(),
       'tags': list(map(lambda x : x.id, self.tags)),
-      'type': self.type_id
+      'type': self.type_id,
     }
     return json_post
   
@@ -281,13 +282,19 @@ class Post(db.Model):
       'id': self.id,
       'author_id': self.author.id,
       'title': self.title,
-      'timestamp': self.timestamp,
+      'timestamp': time.mktime(self.timestamp.timetuple()),
       'abstract': self.abstract,
       'read_times': self.read_times,
       'likes': self.likes.count(),
-      'comment_times': self.comments.count()
+      'comment_times': self.comments.count(),
+      'tags': list(map(lambda x : x.id, self.tags)),
+      'type': self.type_id
     }
     return json_post
+
+  def comments_json(self):
+    comments = list(map(lambda x : x.to_json(), self.comments))
+    return comments
 
   @staticmethod
   def generate_fake(count=100):
@@ -317,9 +324,21 @@ class Comment(db.Model):
   body = db.Column(db.Text)
   post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  comments = db.relationship('Comment', backref="response", remote_side = 'Comment.id')
+  response_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
   # response_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   
+  def to_json(self):
+    return {
+      'id': self.id,
+      'post_id': self.post_id,
+      'author_id': self.author_id,
+      'body': self.body,
+      'response_id': self.response_id,
+      'timestamp': time.mktime(self.timestamp.timetuple())
+    }
+
   @staticmethod
   def generate_fake(count=100):
     from random import seed, randint
@@ -331,12 +350,12 @@ class Comment(db.Model):
     for i in range(count):
       u = User.query.offset(randint(0, user_count - 1)).first()
       p = Post.query.offset(randint(0, post_count - 1)).first()
-      like = Comment(body=forgery_py.lorem_ipsum.sentences(randint(2,5)),
+      comment = Comment(body=forgery_py.lorem_ipsum.sentences(randint(2,5)),
         timestamp=forgery_py.date.date(True),
         author=u,
         post=p
       )
-      db.session.add(like)
+      db.session.add(comment)
       try:
         db.session.commit()
         print('auto create comment %s done' % (i + 1))
