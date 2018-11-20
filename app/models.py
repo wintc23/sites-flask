@@ -324,9 +324,8 @@ class Comment(db.Model):
   body = db.Column(db.Text)
   post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-  comments = db.relationship('Comment', backref="response", remote_side = 'Comment.id')
+  comments = db.relationship('Comment', backref = db.backref('response', remote_side=[id]))
   response_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
-  # response_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   
   def to_json(self):
