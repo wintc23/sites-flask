@@ -26,11 +26,15 @@ def get_posts():
 @api.route('/post/', methods=["POST"])
 def get_post():
   post_id = request.json.get('postId')
+  addRead = request.json.get('addRead')
   type_id = 0
   post_type = request.json.get('postType')
   if post_type:
     type_id = PostType.query.filter_by(alias=post_type).first().id  
   post = Post.query.get_or_404(post_id)
+  if addRead:
+    post.read_times += 1
+    db.session.add(post)
   query = Post.query
   if type_id:
     query = query.filter_by(type_id = type_id)

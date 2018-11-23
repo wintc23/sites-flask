@@ -3,7 +3,7 @@ from flask import g, jsonify, request
 from ..models import User, AnonymousUser
 from . import api
 from .decorators import login_required
-from .errors import unauthorized, forbidden
+from .errors import unauthorized, forbidden, bad_request
 from .. import db
 from ..email import send_email
 
@@ -22,7 +22,7 @@ def verify_password(email_or_token, password):
       g.current_user = AnonymousUser()
     return True
   user = User.query.filter_by(email = email_or_token).first()
-  if not user:
+  if not user or not user.confirmed:
     return False
   g.current_user = user
   g.token_used = False
@@ -33,7 +33,6 @@ def before_request():
   if (request.method == 'OPTIONS'):
     return jsonify({ 'success': True })
   authString = request.headers.get('Authorization', '')
-  print('before_request', authString)
   email_or_token = ''
   password = ''
   if ':' in authString:
@@ -60,6 +59,22 @@ def get_user_by_token():
 @api.route('/register/', methods=["POST"])
 def register():
   data = request.json
+  user = User.query.filter_by(email = data['email']).first()
+  if user:
+    if user.confirmed:
+      res = jsonify({ 'message': '该邮箱已被注册', 'notify': True })
+    else:
+      res = jsonify({ 'message': '该邮箱已被注册，并且重新发送激活邮件至你的邮箱，请注意查收', 'notify': True })
+      token = user.generate_confirmation_token()
+      send_email(user.email, '账号确认', 'register', url = data["url"] + '?token=%s&email=%s'%(token, data['email']), user = user)
+    res.status_code = 403
+    return res
+  else:
+    user = User.query.filter_by(username = data['username']).first()
+    if user:
+      res = jsonify({ 'message': '该用户名已被使用', 'notify': True })
+      res.status_code = 403
+      return res
   user = User(email = data['email'], username = data['username'], password = data['password'])
   db.session.add(user)
   try:
@@ -69,8 +84,22 @@ def register():
     res.status_code = 403
     return res
   token = user.generate_confirmation_token()
-  send_email(user.email, )
+  send_email(user.email, '账号确认', 'template/register', url = data["url"] + '?token=%s'%token, user = user)
   return jsonify({ "success": True })
+
+@api.route('/confirm/', methods=["POST"])
+def confirm():
+  token = request.json.get('token', None)
+  email = request.json.get('email', None)
+  if token and email:
+    user = User.query.filter_by(email = email).first()
+    if user:
+      if user.confirmed:
+        return  jsonify({ 'message': '该账号已经激活，请登录。', 'notify': True })
+      if  user.confirm(token):
+        db.session.commit()
+        return jsonify({ 'message': '激活账户成功，请登录', 'notify': True })
+  return bad_request('激活链接无效！', True)
 
 @api.after_request
 def after_request(response):
