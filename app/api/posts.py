@@ -11,15 +11,22 @@ from .decorators import login_required
 def get_posts():
   page = request.json.get('page', 1)
   post_type = request.json.get('type', 'blog')
-  type_id = PostType.query.filter_by(alias=post_type).first().id
-  pagination = Post.query.filter_by(type_id=type_id).order_by(Post.timestamp.desc()).paginate(
-    page, per_page = current_app.config['FLASK_POSTS_PER_PAGE'],
-    error_out = False)
-  posts = pagination.items
-  post_json_list = reduce(lambda x, y: x.append(y.abstract_json()) or x, posts, [])
+  type_id = 0
+  postType = PostType.query.filter_by(alias=post_type).first()
+  pages = 0
+  if postType:
+    type_id = postType.id
+    pagination = Post.query.filter_by(type_id=type_id, hide=False).order_by(Post.timestamp.desc()).paginate(
+      page, per_page = current_app.config['FLASK_POSTS_PER_PAGE'],
+      error_out = False)
+    posts = pagination.items
+    post_json_list = reduce(lambda x, y: x.append(y.abstract_json()) or x, posts, [])
+    page = pagination.pages
+  else:
+    post_json_list = []
   return jsonify({
     "list": post_json_list,
-    "pages": pagination.pages,
+    "pages": pages,
     "page": page
   })
 
@@ -30,7 +37,9 @@ def get_post():
   type_id = 0
   post_type = request.json.get('postType')
   if post_type:
-    type_id = PostType.query.filter_by(alias=post_type).first().id  
+    postQuery = PostType.query.filter_by(alias=post_type)
+    if postQuery.count() > 0:
+      type_id = postQuery.first().id  
   post = Post.query.get_or_404(post_id)
   if addRead:
     post.read_times += 1
@@ -38,7 +47,7 @@ def get_post():
   query = Post.query
   if type_id:
     query = query.filter_by(type_id = type_id)
-  post_list = query.order_by(Post.timestamp.desc()).all()
+  post_list = query.filter_by(hide = False).order_by(Post.timestamp.desc()).all()
   index = post_list.index(post)
   before = {}
   after = {}

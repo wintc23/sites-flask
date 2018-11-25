@@ -1,6 +1,6 @@
 from flask import g, jsonify, request, current_app
 from ..models import User, AnonymousUser
-from .errors import bad_request
+from .errors import bad_request, not_found
 from . import api
 
 @api.route('/userinfo/', methods=['GET'])

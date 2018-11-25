@@ -9,7 +9,7 @@ def bad_request(message, notify = False):
   return response
 
 
-def unauthorized(message, notify = True):
+def unauthorized(message, notify = False):
   response = jsonify({'error': 'unauthorized', 'message': message, 'notify': notify})
   response.status_code = 401
   return response
@@ -21,7 +21,7 @@ def forbidden(message, notify = False):
   return response
 
 def not_found(message, notify = False):
-  responese = jsonify({'error': 'not found', 'message': message, 'notify': notifya})
+  response = jsonify({'error': 'not found', 'message': message, 'notify': notify})
   response.status_code = 404
   return response
 

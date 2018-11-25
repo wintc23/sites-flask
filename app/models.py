@@ -248,6 +248,7 @@ class Post(db.Model):
   title = db.Column(db.Text)
   body = db.Column(db.Text)
   body_html = db.Column(db.Text)
+  hide = db.Column(db.Boolean, default = False)
   abstract = db.Column(db.Text)
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -305,13 +306,16 @@ class Post(db.Model):
 
     seed()
     user_count = User.query.count()
+    type_count = PostType.query.count()
     for i in range(count):
       u = User.query.offset(randint(0, user_count - 1)).first()
+      postType = PostType.query.offset(randint(0, type_count - 1)).first()
       p = Post(body=forgery_py.lorem_ipsum.sentences(randint(50, 100)),
         read_times=randint(0, 100),
         title=forgery_py.lorem_ipsum.sentences(1),
         abstract=forgery_py.lorem_ipsum.sentences(randint(5, 20)),
         timestamp=forgery_py.date.date(True),
+        type=postType,
         author=u)
       db.session.add(p)
       try:

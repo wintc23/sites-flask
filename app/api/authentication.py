@@ -46,14 +46,14 @@ def before_request():
 @api.route('/tokens/', methods=['POST'])
 def get_token():
   if g.current_user.is_anonymous or g.token_used:
-    return unauthorized('非法请求, 请登录')
+    return unauthorized('非法请求, 请登录', True)
   return jsonify({'token': g.current_user.generate_auth_token(expiration=3600 * 24 * 30), 'expiration': 3600 * 24 * 30})
 
 @api.route('/user/', methods=['GET'])
 @login_required()
 def get_user_by_token():
   if g.current_user.is_anonymous:
-    return unauthorized('非法请求, 请登录', False)
+    return unauthorized('非法请求, 请登录')
   return jsonify(g.current_user.to_json())
 
 @api.route('/register/', methods=["POST"])
