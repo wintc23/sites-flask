@@ -47,7 +47,7 @@ def before_request():
 def get_token():
   if g.current_user.is_anonymous or g.token_used:
     return unauthorized('非法请求, 请登录')
-  return jsonify({'token': g.current_user.generate_auth_token(expiration=3600*24*30), 'expiration': 3600})
+  return jsonify({'token': g.current_user.generate_auth_token(expiration=3600 * 24 * 30), 'expiration': 3600 * 24 * 30})
 
 @api.route('/user/', methods=['GET'])
 @login_required()
