@@ -270,6 +270,7 @@ class Post(db.Model):
       'id': self.id,
       'author_id': self.author.id,
       'title': self.title,
+      'abstract': self.abstract,
       'body': self.body,
       'body_html': self.body_html,
       'timestamp': time.mktime(self.timestamp.timetuple()),

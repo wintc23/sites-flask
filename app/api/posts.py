@@ -86,6 +86,8 @@ def save_post():
   post.type =  PostType.query.get(request.json['type'])
   post.title = request.json['title']
   post.body = request.json['body']
+  post.body_html = request.json['body_html']
+  post.abstract = request.json['abstract']
   db.session.add(post)
   try:
     db.session.commit()
