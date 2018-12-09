@@ -249,6 +249,7 @@ class Post(db.Model):
   body = db.Column(db.Text)
   body_html = db.Column(db.Text)
   hide = db.Column(db.Boolean, default = False)
+  secretCode = db.Column(db.Text, default = '')
   abstract = db.Column(db.Text)
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -271,6 +272,7 @@ class Post(db.Model):
       'author_id': self.author.id,
       'title': self.title,
       'abstract': self.abstract,
+      'hide': self.hide,
       'body': self.body,
       'body_html': self.body_html,
       'timestamp': time.mktime(self.timestamp.timetuple()),
@@ -279,6 +281,7 @@ class Post(db.Model):
       'tags': list(map(lambda x : x.id, self.tags)),
       'type': self.type_id,
     }
+
     return json_post
   
   def abstract_json(self):

@@ -16,7 +16,7 @@ def get_posts():
   pages = 0
   if postType:
     type_id = postType.id
-    pagination = Post.query.filter_by(type_id=type_id, hide=False).order_by(Post.timestamp.desc()).paginate(
+    pagination = Post.query.filter_by(type_id=type_id).order_by(Post.timestamp.desc()).paginate(
       page, per_page = current_app.config['FLASK_POSTS_PER_PAGE'],
       error_out = False)
     posts = pagination.items
@@ -41,13 +41,15 @@ def get_post():
     if postQuery.count() > 0:
       type_id = postQuery.first().id  
   post = Post.query.get_or_404(post_id)
+  # if post.hide and post.author != g.current_user and (request.json.get('secretCode') != post.secretCode):
+    # return bad_request('文章已被隐藏', True)
   if addRead:
     post.read_times += 1
     db.session.add(post)
   query = Post.query
   if type_id:
     query = query.filter_by(type_id = type_id)
-  post_list = query.filter_by(hide = False).order_by(Post.timestamp.desc()).all()
+  post_list = query.order_by(Post.timestamp.desc()).all()
   index = post_list.index(post)
   before = {}
   after = {}
@@ -62,6 +64,10 @@ def get_post():
   json = post.to_json()
   json['before'] = before or None
   json['after'] = after or None
+  if post.hide and post.author != g.current_user and (request.json.get('secretCode') != post.secretCode):
+    json['body'] = ''
+    json['body_html'] = ''
+    json['error_secret'] = True
   return jsonify(json)
 
 @api.route('/save-post/', methods=["POST"])
@@ -88,6 +94,8 @@ def save_post():
   post.body = request.json['body']
   post.body_html = request.json['body_html']
   post.abstract = request.json['abstract']
+  post.hide = request.json['hide']
+  post.secretCode = request.json['secretCode']
   db.session.add(post)
   try:
     db.session.commit()

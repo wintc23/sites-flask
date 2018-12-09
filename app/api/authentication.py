@@ -84,7 +84,7 @@ def register():
     res.status_code = 403
     return res
   token = user.generate_confirmation_token()
-  send_email(user.email, '账号确认', 'template/register', url = data["url"] + '?token=%s'%token, user = user)
+  send_email(user.email, '账号确认', 'register', url = data["url"] + '?token=%s'%token, user = user)
   return jsonify({ "success": True })
 
 @api.route('/confirm/', methods=["POST"])
