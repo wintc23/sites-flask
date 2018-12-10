@@ -107,7 +107,6 @@ class User(db.Model, UserMixin):
         self.confirmed = True
       if self.role is None:
         self.role = Role.query.filter_by(default = True).first()
-    print(self.avatar, '~~~~~~~~~~~~~~3')
     if self.avatar is None:
       self.avatar = 'default_avatar.jpg'
 
