@@ -79,6 +79,7 @@ class User(db.Model, UserMixin):
   id = db.Column(db.Integer, primary_key = True)
   email = db.Column(db.String(64), unique = True, index = True)
   username = db.Column(db.String(64), unique = True, index = True)
+  avatar = db.Column(db.Text(), default="default_avatar.jpg")
   role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
   password_hash = db.Column(db.String(128))
   confirmed = db.Column(db.Boolean, default = False)
@@ -106,6 +107,9 @@ class User(db.Model, UserMixin):
         self.confirmed = True
       if self.role is None:
         self.role = Role.query.filter_by(default = True).first()
+    print(self.avatar, '~~~~~~~~~~~~~~3')
+    if self.avatar is None:
+      self.avatar = 'default_avatar.jpg'
 
   def __repr__(self):
     return "<User %r>" % self.username
@@ -208,7 +212,7 @@ class User(db.Model, UserMixin):
       'id': self.id,
       'username': self.username,
       'manager': self.email == current_app.config['FLASK_ADMIN'],
-      'avatar': 'https://avatars2.githubusercontent.com/u/33415699?s=460&v=4'
+      'avatar': self.avatar
     }
     return json_user
   

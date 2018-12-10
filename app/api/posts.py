@@ -3,7 +3,7 @@ from flask import request, current_app, jsonify, g
 from . import api
 from .decorators import permission_required
 from functools import reduce
-from ..models import Post, PostType, Tag, Comment
+from ..models import Post, PostType, Tag, Comment, Permission
 from .errors import bad_request, unauthorized
 from .decorators import login_required
 
@@ -72,6 +72,7 @@ def get_post():
 
 @api.route('/save-post/', methods=["POST"])
 @login_required()
+@permission_required(Permission.WRITE)
 def save_post():
   post_id = request.json.get('id')
   if post_id:

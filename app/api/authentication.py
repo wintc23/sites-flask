@@ -101,6 +101,19 @@ def confirm():
         return jsonify({ 'message': '激活账户成功，请登录', 'notify': True })
   return bad_request('激活链接无效！', True)
 
+@api.route('/change-password/', methods=['POST'])
+@login_required()
+def change_password():
+  oldPasswd = request.json.get('oldPasswd')
+  newPasswd = request.json.get('newPasswd')
+  if g.current_user.verify_password(oldPasswd) and newPasswd:
+    g.current_user.password = newPasswd
+    db.session.add(g.current_user)
+    db.session.commit()
+    return jsonify({ 'message': '修改密码成功', 'notify': True })
+  errorMsg = '旧密码验证失败' if newPasswd else '新密码不能为空'
+  return bad_request(errorMsg, True)
+
 @api.after_request
 def after_request(response):
   try:
