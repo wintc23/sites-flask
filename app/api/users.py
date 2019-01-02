@@ -1,6 +1,9 @@
 import os
 import sys
 import uuid
+import json
+import urllib.parse 
+import urllib.request
 from PIL import Image
 from flask import g, jsonify, request, current_app
 from ..models import User, AnonymousUser
@@ -38,4 +41,30 @@ def save_avatar():
   db.session.add(g.current_user)
   db.session.commit()
   return jsonify({ 'message': '上传成功', 'filename': filename, 'notify': True })
+
+@api.route('/github_login/')
+def github_login() {
+  code = request.args.get('code')
+  secret = current_app.config['FLASK_GITHUB_SECRET']
+  client_id = current_app.config['FLASK_GITHUB_CLIENTID']
+  url = 'https://github.com/login/oauth/access_token'
+  data = {
+    'code': code,
+    'client_id': client_id,
+    'client_secret': secret
+  }
+  params = parse.urlencode(data).encode('utf-8')
+  headers = {
+    'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)',
+    'Accept': 'application/json'
+  }
+  req = urllib.request.Request(url, params, headers)
+  html = request.urlopen(req).read().decode('utf-8')
+  access_data = json.load(html)
+  access_token = access_data['access_token']
+  req2 = request.Request('https://api.github.com/user?access_token='+access_token)
+  html2 = request.urlopen(req2).read().decode('utf-8')
+  info = json.loads(html2)
+  return jsonify(info)
+}
 
