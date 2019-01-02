@@ -53,7 +53,7 @@ def github_login():
     'client_id': client_id,
     'client_secret': secret
   }
-  params = parse.urlencode(data).encode('utf-8')
+  params = urllib.parse.urlencode(data).encode('utf-8')
   headers = {
     'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)',
     'Accept': 'application/json'
