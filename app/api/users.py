@@ -43,7 +43,7 @@ def save_avatar():
   return jsonify({ 'message': '上传成功', 'filename': filename, 'notify': True })
 
 @api.route('/github_login/', methods=['GET'])
-def github_login() {
+def github_login():
   code = request.args.get('code')
   secret = current_app.config['FLASK_GITHUB_SECRET']
   client_id = current_app.config['FLASK_GITHUB_CLIENT_ID']
@@ -66,5 +66,4 @@ def github_login() {
   html2 = request.urlopen(req2).read().decode('utf-8')
   info = json.loads(html2)
   return jsonify(info)
-}
 
