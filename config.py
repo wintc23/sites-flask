@@ -13,7 +13,8 @@ class Config:
   MAIL_SUBJECT_PREFIX = os.environ.get('MAIL_SUBJECT_PREFIX')
   FLASK_ADMIN = os.environ.get('FLASK_ADMIN')
   FLASK_POSTS_PER_PAGE = 20
-  
+  FLASK_GITHUB_SECRET = os.environ.get('FLASK_GITHUB_SECRET')
+
   staticmethod
   def init_app(app):
     pass
