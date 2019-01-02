@@ -46,7 +46,7 @@ def save_avatar():
 def github_login() {
   code = request.args.get('code')
   secret = current_app.config['FLASK_GITHUB_SECRET']
-  client_id = current_app.config['FLASK_GITHUB_CLIENTID']
+  client_id = current_app.config['FLASK_GITHUB_CLIENT_ID']
   url = 'https://github.com/login/oauth/access_token'
   data = {
     'code': code,

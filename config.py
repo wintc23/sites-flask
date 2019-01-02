@@ -14,6 +14,7 @@ class Config:
   FLASK_ADMIN = os.environ.get('FLASK_ADMIN')
   FLASK_POSTS_PER_PAGE = 20
   FLASK_GITHUB_SECRET = os.environ.get('FLASK_GITHUB_SECRET')
+  FLASK_GITHUB_CLIENT_ID = os.environ.get('FLASK_GITHUB_CLIENT_ID')
 
   staticmethod
   def init_app(app):
