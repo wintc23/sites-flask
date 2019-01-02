@@ -42,7 +42,7 @@ def save_avatar():
   db.session.commit()
   return jsonify({ 'message': '上传成功', 'filename': filename, 'notify': True })
 
-@api.route('/github_login/')
+@api.route('/github_login/', methods=['GET'])
 def github_login() {
   code = request.args.get('code')
   secret = current_app.config['FLASK_GITHUB_SECRET']
