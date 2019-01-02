@@ -59,11 +59,11 @@ def github_login():
     'Accept': 'application/json'
   }
   req = urllib.request.Request(url, params, headers)
-  html = request.urlopen(req).read().decode('utf-8')
+  html = urllib.request.urlopen(req).read().decode('utf-8')
   access_data = json.load(html)
   access_token = access_data['access_token']
-  req2 = request.Request('https://api.github.com/user?access_token='+access_token)
-  html2 = request.urlopen(req2).read().decode('utf-8')
+  req2 = urllib.request.Request('https://api.github.com/user?access_token='+access_token)
+  html2 = urllib.request.urlopen(req2).read().decode('utf-8')
   info = json.loads(html2)
   return jsonify(info)
 
