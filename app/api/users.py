@@ -61,7 +61,10 @@ def github_login():
   req = urllib.request.Request(url, params, headers)
   html = urllib.request.urlopen(req).read().decode('utf-8')
   access_data = json.loads(html)
-  access_token = access_data['access_token']
+  if access_data.get('error', ''):
+    return bad_request('链接已失效，请重新登录', True)
+  print(access_data)
+  access_token = access_data['access_token'] + '12'
   req2 = urllib.request.Request('https://api.github.com/user?access_token='+access_token)
   html2 = urllib.request.urlopen(req2).read().decode('utf-8')
   info = json.loads(html2)
