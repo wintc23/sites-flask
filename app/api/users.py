@@ -11,7 +11,7 @@ from .errors import bad_request, not_found
 from . import api
 from .decorators import login_required
 from .. import db
-
+from ..models import User
 @api.route('/userinfo/', methods=['GET'])
 def get_user_info():
   user_id = request.args.get('id')
@@ -63,10 +63,46 @@ def github_login():
   access_data = json.loads(html)
   if access_data.get('error', ''):
     return bad_request('链接已失效，请重新登录', True)
-  print(access_data)
   access_token = access_data['access_token']
-  req2 = urllib.request.Request('https://api.github.com/user?access_token='+access_token)
+  req2 = urllib.request.Request(url='https://api.github.com/user?access_token='+access_token, headers=headers)
   html2 = urllib.request.urlopen(req2).read().decode('utf-8')
   info = json.loads(html2)
-  return jsonify(info)
+  id_string = 'github' + str(info['id'])
+  user = User.query.filter_by(id_string=id_string).first()
+  if not user:
+    avatar_url = info['avatar_url']
+    if avatar_url:
+      filename = str(uuid.uuid1())
+      dirname, _ = os.path.split(os.path.abspath(sys.argv[0]))
+      upload_path = dirname + '/../files/avatar' + filename
+      urllib.request.urlretrieve(avatar_url, upload_path)
+      avatar = filename
+    else:
+      avatar = '`default_avatar.jpg`'
+    register_info = {
+      'username': info['login'],
+      'id_string': id_string,
+      'avatar': avatar
+    }
+    if info['email']:
+      register_info['email']
+    user = User(**register_info)
+    try:
+      db.session.add(user)
+      db.session.commit()
+    except:
+      db.session.rollback()
+      response = jsonify({ 'error': 'create user error', 'message': '创建用户失败，请重新登录' })
+      response.status_code = 500
+      return response
+  token = user.generate_auth_token(3600 * 24 * 30)
+  return jsonify({ 'token': token })
+
+@api.route('/user_detail/', methods=['GET'])
+def get_user_detail():
+  user_id = request.args.get('id')
+  user = User.query.get_or_404(user_id)
+  if user:
+    return jsonify(user.detail())
+  return bad_request('未查询到相关用户信息', true)
 

@@ -21,7 +21,7 @@ def get_posts():
       error_out = False)
     posts = pagination.items
     post_json_list = reduce(lambda x, y: x.append(y.abstract_json()) or x, posts, [])
-    page = pagination.pages
+    pages = pagination.pages
   else:
     post_json_list = []
   return jsonify({

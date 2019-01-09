@@ -77,8 +77,9 @@ class Role(db.Model):
 class User(db.Model, UserMixin):
   __tablename__ = 'users'
   id = db.Column(db.Integer, primary_key = True)
+  id_string = db.Column(db.String(32), unique = True, index = True) # 第三方登录唯一id
   email = db.Column(db.String(64), unique = True, index = True)
-  username = db.Column(db.String(64), unique = True, index = True)
+  username = db.Column(db.String(64), index = True)
   avatar = db.Column(db.Text(), default="default_avatar.jpg")
   role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
   password_hash = db.Column(db.String(128))
@@ -90,6 +91,7 @@ class User(db.Model, UserMixin):
   last_seen = db.Column(db.DateTime(), default = datetime.utcnow)
   posts = db.relationship('Post', backref = 'author', lazy = 'dynamic')
   comments = db.relationship('Comment', backref = 'author', lazy = 'dynamic')
+  bbs = db.relationship('BBS', backref='author', lazy='dynamic')
   likes = db.relationship('Like', backref = 'author', lazy = 'dynamic')
   # followed = db.relationship('Follow',
     # foreign_keys = [Follow.followed_id],
@@ -215,6 +217,12 @@ class User(db.Model, UserMixin):
     }
     return json_user
   
+  def detail(self):
+    json_user = self.to_json()
+    json_user['comments'] = list(map(lambda x:x.to_json(), self.comments))
+    json_user['bbs'] = list(map(lambda x:x.to_json(), self.bbs))
+    return json_user
+
   @staticmethod
   def generate_fake(count = 100):
     from sqlalchemy.exc import IntegrityError
@@ -345,9 +353,11 @@ class Comment(db.Model):
     return {
       'id': self.id,
       'post_id': self.post_id,
+      'post_title': self.post.title,
       'author_id': self.author_id,
       'body': self.body,
       'response_id': self.response_id,
+      'response_author_id': self.response.author_id if self.response_id else 0,
       'timestamp': time.mktime(self.timestamp.timetuple())
     }
 
@@ -425,4 +435,24 @@ class PostType(db.Model):
       'id': self.id,
       'name': self.name,
       'alias': self.alias
+    }
+
+class BBS(db.Model):
+  __tablename__ = 'bbs'
+  id = db.Column(db.Integer, primary_key = True)
+  body = db.Column(db.Text)
+  author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+  timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
+  comments = db.relationship('BBS', backref = db.backref('response', remote_side=[id]))
+  tree_path = db.Column(db.Text)
+  response_id = db.Column(db.Integer, db.ForeignKey('bbs.id'))
+
+  def to_json(self):
+    return {
+      'id': self.id,
+      'author_id': self.author_id,
+      'response_author_id': self.response.author_id if self.response_id else 0,
+      'response_id': self.response_id,
+      'timestamp': time.mktime(self.timestamp.timetuple()),
+      'body': self.body
     }
