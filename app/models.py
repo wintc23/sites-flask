@@ -444,8 +444,8 @@ class BBS(db.Model):
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   comments = db.relationship('BBS', backref = db.backref('response', remote_side=[id]))
-  tree_path = db.Column(db.Text)
   response_id = db.Column(db.Integer, db.ForeignKey('bbs.id'))
+  root_id = db.Column(db.Integer)
 
   def to_json(self):
     return {
