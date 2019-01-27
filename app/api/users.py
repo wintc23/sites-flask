@@ -74,7 +74,7 @@ def github_login():
     if avatar_url:
       filename = str(uuid.uuid1())
       dirname, _ = os.path.split(os.path.abspath(sys.argv[0]))
-      upload_path = dirname + '/../files/avatar' + filename
+      upload_path = dirname + '/../files/avatar/' + filename
       urllib.request.urlretrieve(avatar_url, upload_path)
       avatar = filename
     else:
