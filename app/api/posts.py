@@ -3,9 +3,11 @@ from flask import request, current_app, jsonify, g
 from . import api
 from .decorators import permission_required
 from functools import reduce
-from ..models import Post, PostType, Tag, Comment, Permission
+from ..models import Post, PostType, Tag, Comment, Permission, Like
 from .errors import bad_request, unauthorized
 from .decorators import login_required
+
+import sqlalchemy
 
 @api.route('/posts/', methods=["POST"])
 def get_posts():
@@ -89,8 +91,9 @@ def save_post():
   for tag_id in request.json['tags']:
     tag = Tag.query.get(tag_id)
     if tag:
-      post.tags.append(tag)  
-  post.type =  PostType.query.get(request.json['type'])
+      post.tags.append(tag)
+  post.abstract_image = request.json['abstract_image']
+  post.type = PostType.query.get(request.json['type'])
   post.title = request.json['title']
   post.body = request.json['body']
   post.body_html = request.json['body_html']
@@ -254,3 +257,33 @@ def get_comments():
   if not post:
     return bad_request('请求错误', True)
   return jsonify(post.comments_json())
+
+# 返回最近的5篇文章
+@api.route('/get-recent-posts/', methods=["GET"])
+def get_recent_posts():
+  pagination = Post.query.filter(Post.abstract_image != None).filter_by(hide=False).order_by(Post.timestamp.desc()).paginate(1, per_page=5)
+  posts = pagination.items
+  post_json_list = reduce(lambda x, y: x.append(y.abstract_json()) or x, posts, [])
+  return jsonify({
+    "list": post_json_list
+  })
+
+# 返回阅读数
+@api.route('/get-hot-posts/', methods=["GET"])
+def get_hot_posts():
+  comment_sub = Comment.query.group_by(Comment.post_id).with_entities(Comment.post_id, sqlalchemy.func.count(Comment.post_id).label('count')).subquery()
+  result = db.session.query(Post, comment_sub.c.count).join(comment_sub, Post.id == comment_sub.c.post_id).order_by(comment_sub.c.count.desc()).paginate(1, per_page=4)
+  post_list = reduce(lambda x, y: x.append(y[0]) or x, result.items, [])
+
+  like_sub = Like.query.group_by(Like.post_id).with_entities(Like.post_id, sqlalchemy.func.count(Like.post_id).label('count')).subquery()
+  result = db.session.query(Post, like_sub.c.count).join(like_sub, Post.id == like_sub.c.post_id).order_by(like_sub.c.count.desc()).paginate(1, per_page=3)
+  post_list.extend(reduce(lambda x, y: x.append(y[0]) or x, result.items, []))
+
+  pagination = Post.query.filter_by(hide=False).order_by(Post.read_times.desc()).paginate(1, per_page=3)
+  post_list.extend(pagination.items)
+
+  post_list = reduce(lambda x, y: (x.append(y) if y not in x else x) or x, post_list, [])
+  post_list = reduce(lambda x, y: x.append(y.abstract_json()) or x, post_list, [])
+  return jsonify({
+    "list": post_list
+  })

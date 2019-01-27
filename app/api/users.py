@@ -106,3 +106,25 @@ def get_user_detail():
     return jsonify(user.detail())
   return bad_request('未查询到相关用户信息', true)
 
+@api.route('/change-username/', methods=['POST'])
+@login_required()
+def save_username():
+  username = request.json.get('username')
+  if not username:
+    return bad_request('用户名长度应该在2~15个字符', True)
+  name_len = len(username)
+  if name_len < 2 or name_len > 15:
+    return bad_request('用户名长度应该在2~15个字符', True)
+  user = User.query.filter_by(username=username).first()
+  if user:
+    if user.id == g.current_user.id:
+      return bad_request('未修改用户名', True)
+    return bad_request('该用户名已被占用', True)
+  g.current_user.username = username
+  try:
+    db.session.add(g.current_user)
+    db.session.commit()
+    return jsonify({ 'message': '修改成功' })
+  except:
+    db.session.rollback()
+    return bad_request('请求数据库出错，请重试', True)

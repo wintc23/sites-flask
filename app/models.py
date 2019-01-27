@@ -213,7 +213,8 @@ class User(db.Model, UserMixin):
       'id': self.id,
       'username': self.username,
       'manager': self.email == current_app.config['FLASK_ADMIN'],
-      'avatar': self.avatar
+      'avatar': self.avatar,
+      'id_string': self.id_string
     }
     return json_user
   
@@ -262,6 +263,7 @@ class Post(db.Model):
   hide = db.Column(db.Boolean, default = False)
   secretCode = db.Column(db.Text, default = '')
   abstract = db.Column(db.Text)
+  abstract_image = db.Column(db.Text())
   timestamp = db.Column(db.DateTime, index = True, default = datetime.utcnow)
   author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
   type_id = db.Column(db.Integer, db.ForeignKey('post_type.id'))
@@ -291,8 +293,8 @@ class Post(db.Model):
       'likes': self.likes.count(),
       'tags': list(map(lambda x : x.id, self.tags)),
       'type': self.type_id,
+      'abstract_image': self.abstract_image
     }
-
     return json_post
   
   def abstract_json(self):
@@ -306,7 +308,8 @@ class Post(db.Model):
       'likes': self.likes.count(),
       'comment_times': self.comments.count(),
       'tags': list(map(lambda x : x.id, self.tags)),
-      'type': self.type_id
+      'type': self.type_id,
+      'abstract_image': self.abstract_image
     }
     return json_post
 

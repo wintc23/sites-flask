@@ -1,6 +1,7 @@
-from ..models import BBS
+from functools import reduce
 from flask import request, jsonify, current_app, g
 from sqlalchemy import or_
+from ..models import BBS
 from .decorators import login_required
 from .errors import bad_request
 from . import api
@@ -59,4 +60,12 @@ def add_bbs():
     db.session.rollback()
   return bad_request('服务器处理请求报错', True)
 
+@api.route('/get-recent-bbs/', methods=["GET"])
+def get_recent_bbs():
+  pagination = BBS.query.order_by(BBS.timestamp.desc()).paginate(1, per_page=10)
+  bbs = pagination.items
+  bbs_list = reduce(lambda x, y: x.append(y.to_json()) or x, bbs, [])
+  return jsonify({
+    "list": bbs_list
+  })
 
